@@ -28,7 +28,10 @@
 
 #include <set>
 #include <mutex>
+
+#include <boost/serialization/set.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/access.hpp>
 #include <boost/serialization/export.hpp>
 
 
@@ -43,25 +46,26 @@ class Frame;
 class KannalaBrandt8;
 class Pinhole;
 
-//BOOST_CLASS_EXPORT_GUID(Pinhole, "Pinhole")
-//BOOST_CLASS_EXPORT_GUID(KannalaBrandt8, "KannalaBrandt8")
+// BOOST_CLASS_EXPORT_GUID(Pinhole, "Pinhole")
+// BOOST_CLASS_EXPORT_GUID(KannalaBrandt8, "KannalaBrandt8")
 
 class Atlas
 {
+    private:
     friend class boost::serialization::access;
 
     template<class Archive>
     void serialize(Archive &ar, const unsigned int version)
     {
-        //ar.template register_type<Pinhole>();
-        //ar.template register_type<KannalaBrandt8>();
+        ar.template register_type<Pinhole>();
+        ar.template register_type<KannalaBrandt8>();
 
         // Save/load the set of maps, the set is broken in libboost 1.58 for ubuntu 16.04
-        //ar & mspMaps;
+        ar & mspMaps;
         ar & mvpBackupMaps;
         ar & mvpCameras;
-        //ar & mvpBackupCamPin;
-        //ar & mvpBackupCamKan;
+        ar & mvpBackupCamPin;
+        ar & mvpBackupCamKan;
         // Need to save/load the static Id from Frame, KeyFrame, MapPoint and Map
         ar & Map::nNextId;
         ar & Frame::nNextId;

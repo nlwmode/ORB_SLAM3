@@ -35,7 +35,7 @@
 
 namespace ORB_SLAM3 {
     class GeometricCamera {
-
+    private:
         friend class boost::serialization::access;
 
         template<class Archive>
@@ -45,7 +45,6 @@ namespace ORB_SLAM3 {
             ar & mnType;
             ar & mvParameters;
         }
-
 
     public:
         GeometricCamera() {}

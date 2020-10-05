@@ -4051,6 +4051,15 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
             float invz = 1/P3D2c.at<float>(2);
             float x = P3D2c.at<float>(0)*invz;
             float y = P3D2c.at<float>(1)*invz;
+            
+            //! github 上面的issue
+            // modify by nlw  https://github.com/UZ-SLAMLab/ORB_SLAM3/issues/133
+
+            // float u = pKF2->fx * x + pKF2->cx;
+            // float u = pKF2->fy * y + pKF2->cy;
+            // obs2 << u, v;
+
+            // modify by nlw
 
             obs2 << x, y;
             kpUn2 = cv::KeyPoint(cv::Point2f(x, y), pMP2->mnTrackScaleLevel);

@@ -77,6 +77,7 @@ class Atlas;
 class Tracking;
 class LocalMapping;
 class LoopClosing;
+class KeyFrameDatabase;
 
 class System
 {
@@ -177,13 +178,23 @@ public:
 
     void ChangeDataset();
 
-    //void SaveAtlas(int type);
+    // TODO: Save/Load functions
+    // SaveMap(const string &filename);
+    // LoadMap(const string &filename);
+
+    // using the map 
+    void SaveAtlas(string saveFileName );
+    bool LoadAtlas(string filename );
+    void InitAfterLoadAtlas();
+
+protected:
+    // cv::FileStorage mSettings;
+    std::string msMapFilename;
+    int miSaveMap;
+    int miLoadMap;
+    bool mbReuseMap;
 
 private:
-
-    //bool LoadAtlas(string filename, int type);
-
-    //string CalculateCheckSum(string filename, int type);
 
     // Input sensor
     eSensor mSensor;

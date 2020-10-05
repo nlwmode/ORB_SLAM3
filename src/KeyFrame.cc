@@ -908,6 +908,7 @@ void KeyFrame::UpdateMap(Map* pMap)
 
 void KeyFrame::PreSave(set<KeyFrame*>& spKF,set<MapPoint*>& spMP, set<GeometricCamera*>& spCam)
 {
+    cout << "INFO -- KeyFrame::PreSave ing ..." << endl;
     // Save the id of each MapPoint in this KF, there can be null pointer in the vector
     mvBackupMapPointsId.clear();
     mvBackupMapPointsId.reserve(N);
@@ -984,6 +985,7 @@ void KeyFrame::PreSave(set<KeyFrame*>& spKF,set<MapPoint*>& spMP, set<GeometricC
     if(mpImuPreintegrated)
         mBackupImuPreintegrated.CopyFrom(mpImuPreintegrated);
     //cout << "KeyFrame: Imu Preintegrated stored" << endl;
+    cout << "INFO -- KeyFrame::PreSave done!" << endl;
 }
 
 void KeyFrame::PostLoad(map<long unsigned int, KeyFrame*>& mpKFid, map<long unsigned int, MapPoint*>& mpMPid, map<unsigned int, GeometricCamera*>& mpCamId){

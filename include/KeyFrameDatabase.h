@@ -30,8 +30,13 @@
 #include "Map.h"
 
 #include <boost/serialization/base_object.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/list.hpp>
+#include <boost/serialization/split_free.hpp>
+#include <boost/serialization/split_member.hpp>
 
 #include<mutex>
 
@@ -46,17 +51,62 @@ class Map;
 
 class KeyFrameDatabase
 {
+    private:
     friend class boost::serialization::access;
 
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version)
     {
+        boost::serialization::split_member(ar , *this , version);
+    }
+
+    template<class Archive>
+    void save(Archive& ar , const unsigned int version) const //注意使用 const
+    {
+        int size = mvInvertedFile.size();
+        int size2 = 0;
+        ar & size;
+        for(vector< list<KeyFrame*> >::const_iterator vit = mvInvertedFile.begin() ; vit != mvInvertedFile.end() ; ++vit)
+        {
+          ar & (*vit);
+          // size2 = (*vit).size();
+          // ar & size2;
+          // for(list<KeyFrame*>::const_iterator lit = (*vit).begin() ; lit != (*vit).end() ; ++lit )
+          // {
+          //   ar & (*(*lit));
+          // }
+        }
+
         ar & mvBackupInvertedFileId;
     }
 
-public:
+    template<class Archive>
+    void load(Archive& ar , const unsigned int version)
+    {
+      int size , size2;
+      ar & size;
+      for(int i = 0 ; i < size ; ++i)
+      {
+        // ar & size2;
+        list<KeyFrame*> tmp_list;
+        ar & tmp_list;
 
-    KeyFrameDatabase(const ORBVocabulary &voc);
+        // for(int j = 0 ; j < size2 ; ++j)
+        // {
+        //   KeyFrame *pKeyFrame = new KeyFrame();
+        //   ar & (*pKeyFrame);
+        //   tmp_list.push_back(pKeyFrame);
+        // }
+        mvInvertedFile.push_back(tmp_list);
+      }
+        ar & mvBackupInvertedFileId;
+    }
+
+
+
+public:
+   KeyFrameDatabase(){}
+   KeyFrameDatabase(const ORBVocabulary &voc);
 
    void add(KeyFrame* pKF);
 
@@ -86,10 +136,10 @@ protected:
   const ORBVocabulary* mpVoc;
 
   // Inverted file
-  std::vector<list<KeyFrame*> > mvInvertedFile;
+  std::vector< list<KeyFrame*> > mvInvertedFile;
 
   // For save relation without pointer, this is necessary for save/load function
-  std::vector<list<long unsigned int> > mvBackupInvertedFileId;
+  std::vector< list<long unsigned int> > mvBackupInvertedFileId;
 
   // Mutex
   std::mutex mMutex;

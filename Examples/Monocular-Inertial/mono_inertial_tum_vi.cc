@@ -55,7 +55,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-
     // Load all sequences:
     int seq;
     vector< vector<string> > vstrImageFilenames;

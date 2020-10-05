@@ -33,13 +33,14 @@
 #include "TwoViewReconstruction.h"
 
 namespace ORB_SLAM3 {
-    class KannalaBrandt8 final : public GeometricCamera {
-
+    class KannalaBrandt8 : public GeometricCamera {
+    private:
     friend class boost::serialization::access;
 
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version)
     {
+        // ar.template register_type< GeometricCamera >();
         ar & boost::serialization::base_object<GeometricCamera>(*this);
         ar & const_cast<float&>(precision);
     }

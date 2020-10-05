@@ -36,6 +36,11 @@ KeyFrameDatabase::KeyFrameDatabase (const ORBVocabulary &voc):
 }
 
 
+  // Explicit template instantiation
+  template void KeyFrameDatabase::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &, const unsigned int)  const;
+  template void KeyFrameDatabase::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &, const unsigned int);
+
+
 void KeyFrameDatabase::add(KeyFrame *pKF)
 {
     unique_lock<mutex> lock(mMutex);
@@ -896,6 +901,7 @@ vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F, Map
 
 void KeyFrameDatabase::PreSave()
 {
+    cout << "INFO -- KeyFrameDatabase::PreSave ing ..." << endl;
     //Save the information about the inverted index of KF to node
     mvBackupInvertedFileId.resize(mvInvertedFile.size());
     for(int i = 0, numEl = mvInvertedFile.size(); i < numEl; ++i)
@@ -905,6 +911,7 @@ void KeyFrameDatabase::PreSave()
             mvBackupInvertedFileId[i].push_back((*it)->mnId);
         }
     }
+    cout << "INFO -- KeyFrameDatabase::PreSave done!" << endl;
 }
 
 void KeyFrameDatabase::PostLoad(map<long unsigned int, KeyFrame*> mpKFid)

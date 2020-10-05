@@ -591,7 +591,6 @@ void MapPoint::PreSave(set<KeyFrame*>& spKF,set<MapPoint*>& spMP)
             EraseObservation(pKFi);
         }
     }
-
     // Save the id of the reference KF
     if(spKF.find(mpRefKF) != spKF.end())
     {

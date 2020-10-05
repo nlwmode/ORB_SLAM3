@@ -261,6 +261,7 @@ bool Atlas::isImuInitialized()
 
 void Atlas::PreSave()
 {
+    cout << "INFO -- Atlas::PreSave ing ..." << endl;
     if(mpCurrentMap){
         if(!mspMaps.empty() && mnLastInitKFidMap < mpCurrentMap->GetMaxKFid())
             mnLastInitKFidMap = mpCurrentMap->GetMaxKFid()+1; //The init KF is the next of current maximum
@@ -284,19 +285,20 @@ void Atlas::PreSave()
         pMi->PreSave(spCams);
     }
     cout << "Maps stored" << endl;
-    for(GeometricCamera* pCam : mvpCameras)
-    {
-        cout << "Pre-save of camera " << pCam->GetId() << endl;
-        if(pCam->GetType() == pCam->CAM_PINHOLE)
-        {
-            mvpBackupCamPin.push_back((Pinhole*) pCam);
-        }
-        else if(pCam->GetType() == pCam->CAM_FISHEYE)
-        {
-            mvpBackupCamKan.push_back((KannalaBrandt8*) pCam);
-        }
-    }
-
+    
+    // for(GeometricCamera* pCam : mvpCameras)
+    // {
+    //     cout << "Pre-save of camera " << pCam->GetId() << endl;
+    //     if(pCam->GetType() == pCam->CAM_PINHOLE)
+    //     {
+    //         mvpBackupCamPin.push_back((Pinhole*) pCam);
+    //     }
+    //     else if(pCam->GetType() == pCam->CAM_FISHEYE)
+    //     {
+    //         mvpBackupCamKan.push_back((KannalaBrandt8*) pCam);
+    //     }
+    // }
+    cout << "INFO -- Atlas::PreSave done!" << endl;
 }
 
 void Atlas::PostLoad()

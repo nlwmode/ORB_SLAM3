@@ -96,72 +96,6 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpAtlas = new Atlas(0);
     //----
 
-    /*if(strLoadingFile.empty())
-    {
-        //Load ORB Vocabulary
-        cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;
-
-        mpVocabulary = new ORBVocabulary();
-        bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
-        if(!bVocLoad)
-        {
-            cerr << "Wrong path to vocabulary. " << endl;
-            cerr << "Falied to open at: " << strVocFile << endl;
-            exit(-1);
-        }
-        cout << "Vocabulary loaded!" << endl << endl;
-
-        //Create KeyFrame Database
-        mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
-
-        //Create the Atlas
-        //mpMap = new Map();
-        mpAtlas = new Atlas(0);
-    }
-    else
-    {
-        //Load ORB Vocabulary
-        cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;
-
-        mpVocabulary = new ORBVocabulary();
-        bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
-        if(!bVocLoad)
-        {
-            cerr << "Wrong path to vocabulary. " << endl;
-            cerr << "Falied to open at: " << strVocFile << endl;
-            exit(-1);
-        }
-        cout << "Vocabulary loaded!" << endl << endl;
-
-        cout << "Load File" << endl;
-
-        // Load the file with an earlier session
-        //clock_t start = clock();
-        bool isRead = LoadAtlas(strLoadingFile,BINARY_FILE);
-
-        if(!isRead)
-        {
-            cout << "Error to load the file, please try with other session file or vocabulary file" << endl;
-            exit(-1);
-        }
-        mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
-
-        mpAtlas->SetKeyFrameDababase(mpKeyFrameDatabase);
-        mpAtlas->SetORBVocabulary(mpVocabulary);
-        mpAtlas->PostLoad();
-        //cout << "KF in DB: " << mpKeyFrameDatabase->mnNumKFs << "; words: " << mpKeyFrameDatabase->mnNumWords << endl;
-
-        loadedAtlas = true;
-
-        mpAtlas->CreateNewMap();
-
-        //clock_t timeElapsed = clock() - start;
-        //unsigned msElapsed = timeElapsed / (CLOCKS_PER_SEC / 1000);
-        //cout << "Binary file read in " << msElapsed << " ms" << endl;
-
-        //usleep(10*1000*1000);
-    }*/
-
 
     if (mSensor==IMU_STEREO || mSensor==IMU_MONOCULAR)
         mpAtlas->SetInertialSensor();
@@ -216,6 +150,39 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
     // Fix verbosity
     Verbose::SetTh(Verbose::VERBOSITY_QUIET);
+
+    cv::FileNode mapfile_node = fsSettings["Map.mapfile"];
+    if(!mapfile_node.empty())
+    {
+        msMapFilename = (string)mapfile_node;
+    }
+    miSaveMap = fsSettings["Map.save_map"];
+    miLoadMap = fsSettings["Map.load_map"];
+    mbReuseMap = false;
+    if(miLoadMap == 1 && miSaveMap == 0)
+    {   
+        bool isRead = LoadAtlas(msMapFilename);
+        if(!isRead)
+        {
+            cout << "Error to load the file, please try with other session file or vocabulary file" << endl;
+            exit(-1);
+        }
+        else
+            mbReuseMap = true;
+        // init map
+        // mpAtlas->SetKeyFrameDababase(mpKeyFrameDatabase);
+        // mpAtlas->SetORBVocabulary(mpVocabulary);
+        // mpAtlas->PostLoad();
+    }
+    // 开启定位模式
+    if(mbReuseMap)
+        ActivateLocalizationMode();
+
+    cout << endl << "About the map setting :" << endl
+         << "map name : " << msMapFilename << endl 
+         << "save map : " << miSaveMap << endl 
+         << "load map : " << miLoadMap << endl 
+         << "reuse map: " << mbReuseMap << endl;
 
 }
 
@@ -447,6 +414,13 @@ void System::ResetActiveMap()
 
 void System::Shutdown()
 {
+    cout << "INFO -- the process Shutdown() is start !" << endl;
+    if( mbReuseMap && miLoadMap == 1 )
+    {
+        cout << "INFO -- the process Shutdown() is end !" << endl;
+        return;
+    }
+
     mpLocalMapper->RequestFinish();
     mpLoopCloser->RequestFinish();
     if(mpViewer)
@@ -473,6 +447,12 @@ void System::Shutdown()
 
     if(mpViewer)
         pangolin::BindToContext("ORB-SLAM2: Map Viewer");
+
+    if(!mbReuseMap && miSaveMap == 1)
+    {
+        SaveAtlas(msMapFilename);
+    }
+    cout << "INFO -- the process Shutdown() is end !" << endl;
 }
 
 
@@ -915,154 +895,70 @@ void System::ChangeDataset()
     mpTracker->NewDataset();
 }
 
-/*void System::SaveAtlas(int type){
-    cout << endl << "Enter the name of the file if you want to save the current Atlas session. To exit press ENTER: ";
-    string saveFileName;
-    getline(cin,saveFileName);
-    if(!saveFileName.empty())
+void System::SaveAtlas(string saveFileName ){
+    // cout << endl << "Enter the name of the file if you want to save the current Atlas session. To exit press ENTER: ";
+    cout << "INFO -- SaveAtlas ing..." << endl;
+    // Save the current session
+    
+    // also have map PreSave();
+    mpAtlas->PreSave();
+    mpKeyFrameDatabase->PreSave();
+    
+    std::ofstream ofs(saveFileName , std::ios::binary);
+    if(!ofs)
     {
-        //clock_t start = clock();
-
-        // Save the current session
-        mpAtlas->PreSave();
-        mpKeyFrameDatabase->PreSave();
-
-        string pathSaveFileName = "./";
-        pathSaveFileName = pathSaveFileName.append(saveFileName);
-        pathSaveFileName = pathSaveFileName.append(".osa");
-
-        string strVocabularyChecksum = CalculateCheckSum(mStrVocabularyFilePath,TEXT_FILE);
-        std::size_t found = mStrVocabularyFilePath.find_last_of("/\\");
-        string strVocabularyName = mStrVocabularyFilePath.substr(found+1);
-
-        if(type == TEXT_FILE) // File text
-        {
-            cout << "Starting to write the save text file " << endl;
-            std::remove(pathSaveFileName.c_str());
-            std::ofstream ofs(pathSaveFileName, std::ios::binary);
-            boost::archive::text_oarchive oa(ofs);
-
-            oa << strVocabularyName;
-            oa << strVocabularyChecksum;
-            oa << mpAtlas;
-            oa << mpKeyFrameDatabase;
-            cout << "End to write the save text file" << endl;
-        }
-        else if(type == BINARY_FILE) // File binary
-        {
-            cout << "Starting to write the save binary file" << endl;
-            std::remove(pathSaveFileName.c_str());
-            std::ofstream ofs(pathSaveFileName, std::ios::binary);
-            boost::archive::binary_oarchive oa(ofs);
-            oa << strVocabularyName;
-            oa << strVocabularyChecksum;
-            oa << mpAtlas;
-            oa << mpKeyFrameDatabase;
-            cout << "End to write save binary file" << endl;
-        }
-
-        //clock_t timeElapsed = clock() - start;
-        //unsigned msElapsed = timeElapsed / (CLOCKS_PER_SEC / 1000);
-        //cout << "Binary file saved in " << msElapsed << " ms" << endl;
+        cerr << "Cannot Write to Mapfile : " << saveFileName << std::endl;
+        exit(-1);
     }
+    ofs.open(saveFileName.c_str());
+    cout << std::flush; // 将缓冲区的内容全部强制输出
+    boost::archive::binary_oarchive oa(ofs , boost::archive::no_header);
+
+    oa << mpAtlas;
+    oa << mpKeyFrameDatabase;
+
+    ofs.close();
+    cout << "INFO -- SaveAtlas done!" << endl;
 }
 
-bool System::LoadAtlas(string filename, int type)
+bool System::LoadAtlas(string filename )
 {
-    string strFileVoc, strVocChecksum;
+    cout << "INFO -- LoadAtlas ing...!" << endl;
     bool isRead = false;
+    std::ifstream ifs(filename, std::ios::binary);
+    if(!ifs)
+    {
+        cout << "Load file not found" << endl;
+        return false;
+    }
+    cout << "test 1"  << endl;
+    boost::archive::binary_iarchive ia(ifs , boost::archive::no_header);
+    // ia >> strFileVoc;
+    // ia >> strVocChecksum;
 
-    if(type == TEXT_FILE) // File text
-    {
-        cout << "Starting to read the save text file " << endl;
-        std::ifstream ifs(filename, std::ios::binary);
-        if(!ifs.good())
-        {
-            cout << "Load file not found" << endl;
-            return false;
-        }
-        boost::archive::text_iarchive ia(ifs);
-        ia >> strFileVoc;
-        ia >> strVocChecksum;
-        ia >> mpAtlas;
-        //ia >> mpKeyFrameDatabase;
-        cout << "End to load the save text file " << endl;
-        isRead = true;
-    }
-    else if(type == BINARY_FILE) // File binary
-    {
-        cout << "Starting to read the save binary file"  << endl;
-        std::ifstream ifs(filename, std::ios::binary);
-        if(!ifs.good())
-        {
-            cout << "Load file not found" << endl;
-            return false;
-        }
-        boost::archive::binary_iarchive ia(ifs);
-        ia >> strFileVoc;
-        ia >> strVocChecksum;
-        ia >> mpAtlas;
-        //ia >> mpKeyFrameDatabase;
-        cout << "End to load the save binary file" << endl;
-        isRead = true;
-    }
+    ia >> mpAtlas;
+    ia >> mpKeyFrameDatabase;
+    ifs.close();
+    isRead = true;
 
     if(isRead)
     {
-        //Check if the vocabulary is the same
-        string strInputVocabularyChecksum = CalculateCheckSum(mStrVocabularyFilePath,TEXT_FILE);
-
-        if(strInputVocabularyChecksum.compare(strVocChecksum) != 0)
-        {
-            cout << "The vocabulary load isn't the same which the load session was created " << endl;
-            cout << "-Vocabulary name: " << strFileVoc << endl;
-            return false; // Both are differents
-        }
-
+        cout << "INFO -- LoadAtlas done !" << endl;
+        cout << "INFO -- Init after load atlas ing!" << endl;
+        InitAfterLoadAtlas();
+        cout << "INFO -- Init after load atlas done!" << endl;
         return true;
     }
+    cout << "INFO -- LoadAtlas error !" << endl;
     return false;
 }
-
-string System::CalculateCheckSum(string filename, int type)
+void System::InitAfterLoadAtlas()
 {
-    string checksum = "";
 
-    unsigned char c[MD5_DIGEST_LENGTH];
+    
 
-    std::ios_base::openmode flags = std::ios::in;
-    if(type == BINARY_FILE) // Binary file
-        flags = std::ios::in | std::ios::binary;
+}
 
-    ifstream f(filename.c_str(), flags);
-    if ( !f.is_open() )
-    {
-        cout << "[E] Unable to open the in file " << filename << " for Md5 hash." << endl;
-        return checksum;
-    }
-
-    MD5_CTX md5Context;
-    char buffer[1024];
-
-    MD5_Init (&md5Context);
-    while ( int count = f.readsome(buffer, sizeof(buffer)))
-    {
-        MD5_Update(&md5Context, buffer, count);
-    }
-
-    f.close();
-
-    MD5_Final(c, &md5Context );
-
-    for(int i = 0; i < MD5_DIGEST_LENGTH; i++)
-    {
-        char aux[10];
-        sprintf(aux,"%02x", c[i]);
-        checksum = checksum + aux;
-    }
-
-    return checksum;
-}*/
 
 } //namespace ORB_SLAM
 

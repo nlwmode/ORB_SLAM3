@@ -1386,6 +1386,17 @@ void Tracking::ResetFrameIMU()
 
 void Tracking::Track()
 {
+    cout << "INFO -- Tracking ing ..." << endl;
+
+//TODO 将 SLAM模式 和 Localization模式 解耦
+//! modify by nlw
+
+    //重定位模式应该先进行IMU的初始化
+
+//! modify by nlw
+
+    cout << "DEBUG -- test 1" << endl;
+
 #ifdef SAVE_TIMES
     mTime_PreIntIMU = 0;
     mTime_PosePred = 0;
@@ -1395,24 +1406,29 @@ void Tracking::Track()
 
     if (bStepByStep)
     {
+        cout << "DEBUG -- test 2" << endl;
         while(!mbStep)
             usleep(500);
         mbStep = false;
     }
 
+    
+
     if(mpLocalMapper->mbBadImu)
     {
+        cout << "DEBUG -- test 3" << endl;
         cout << "TRACK: Reset map because local mapper set the bad imu flag " << endl;
         mpSystem->ResetActiveMap();
         return;
     }
-
+    
     Map* pCurrentMap = mpAtlas->GetCurrentMap();
 
     if(mState!=NO_IMAGES_YET)
     {
         if(mLastFrame.mTimeStamp>mCurrentFrame.mTimeStamp)
         {
+            cout << "DEBUG -- test 4" << endl;
             cerr << "ERROR: Frame with a timestamp older than previous frame detected!" << endl;
             unique_lock<mutex> lock(mMutexImuQueue);
             mlQueueImuData.clear();
@@ -1421,6 +1437,7 @@ void Tracking::Track()
         }
         else if(mCurrentFrame.mTimeStamp>mLastFrame.mTimeStamp+1.0)
         {
+            cout << "DEBUG -- test 5" << endl;
             cout << "id last: " << mLastFrame.mnId << "    id curr: " << mCurrentFrame.mnId << endl;
             if(mpAtlas->isInertial())
             {
@@ -1450,17 +1467,23 @@ void Tracking::Track()
 
 
     if ((mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO) && mpLastKeyFrame)
-        mCurrentFrame.SetNewBias(mpLastKeyFrame->GetImuBias());
+    {
+        cout << "DEBUG -- test 6" << endl;
+         mCurrentFrame.SetNewBias(mpLastKeyFrame->GetImuBias());
+    }
+       
 
     if(mState==NO_IMAGES_YET)
     {
+        cout << "DEBUG -- test 7" << endl;
         mState = NOT_INITIALIZED;
     }
 
     mLastProcessedState=mState;
 
-    if ((mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO) && !mbCreatedMap)
+    if ((mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO) && !mbCreatedMap)   // 如果是重定位模式，mbCreatedMap需要为 true
     {
+        cout << "DEBUG -- test 8" << endl;
 #ifdef SAVE_TIMES
         std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 #endif
@@ -1470,7 +1493,6 @@ void Tracking::Track()
 
         mTime_PreIntIMU = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(t1 - t0).count();
 #endif
-
 
     }
     mbCreatedMap = false;
@@ -1484,18 +1506,23 @@ void Tracking::Track()
     int nMapChangeIndex = pCurrentMap->GetLastMapChange();
     if(nCurMapChangeIndex>nMapChangeIndex)
     {
+        cout << "DEBUG -- test 9" << endl;
         // cout << "Map update detected" << endl;
         pCurrentMap->SetLastMapChange(nCurMapChangeIndex);
         mbMapUpdated = true;
     }
 
-
     if(mState==NOT_INITIALIZED)
     {
+
         if(mSensor==System::STEREO || mSensor==System::RGBD || mSensor==System::IMU_STEREO)
+        {
             StereoInitialization();
+        }
+            
         else
         {
+            cout << "DEBUG -- test 10" << endl;
             MonocularInitialization();
         }
 
@@ -1503,12 +1530,14 @@ void Tracking::Track()
 
         if(mState!=OK) // If rightly initialized, mState=OK
         {
+            cout << "DEBUG -- test 11" << endl;
             mLastFrame = Frame(mCurrentFrame);
             return;
         }
 
         if(mpAtlas->GetAllMaps().size() == 1)
         {
+            cout << "DEBUG -- test 12" << endl;
             mnFirstFrameId = mCurrentFrame.mnId;
         }
     }
@@ -1520,6 +1549,7 @@ void Tracking::Track()
         // Initial camera pose estimation using motion model or relocalization (if tracking is lost)
         if(!mbOnlyTracking)
         {
+            cout << "DEBUG -- test 13" << endl;
 #ifdef SAVE_TIMES
         std::chrono::steady_clock::time_point timeStartPosePredict = std::chrono::steady_clock::now();
 #endif
@@ -1535,20 +1565,21 @@ void Tracking::Track()
 
                 if((mVelocity.empty() && !pCurrentMap->isImuInitialized()) || mCurrentFrame.mnId<mnLastRelocFrameId+2)
                 {
+                    cout << "DEBUG -- test 14" << endl;
                     //Verbose::PrintMess("TRACK: Track with respect to the reference KF ", Verbose::VERBOSITY_DEBUG);
                     bOK = TrackReferenceKeyFrame();
                 }
                 else
                 {
+                    cout << "DEBUG -- test 15" << endl;
                     //Verbose::PrintMess("TRACK: Track with motion model", Verbose::VERBOSITY_DEBUG);
                     bOK = TrackWithMotionModel();
                     if(!bOK)
                         bOK = TrackReferenceKeyFrame();
                 }
-
-
                 if (!bOK)
                 {
+                    cout << "DEBUG -- test 16" << endl;
                     if ( mCurrentFrame.mnId<=(mnLastRelocFrameId+mnFramesToResetIMU) &&
                          (mSensor==System::IMU_MONOCULAR || mSensor==System::IMU_STEREO))
                     {
@@ -1572,6 +1603,7 @@ void Tracking::Track()
 
                 if (mState == RECENTLY_LOST)
                 {
+                    cout << "DEBUG -- test 17" << endl;
                     Verbose::PrintMess("Lost for a short time", Verbose::VERBOSITY_NORMAL);
 
                     bOK = true;
@@ -1625,7 +1657,6 @@ void Tracking::Track()
 
 #ifdef SAVE_TIMES
         std::chrono::steady_clock::time_point timeEndPosePredict = std::chrono::steady_clock::now();
-
         mTime_PosePred = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(timeEndPosePredict - timeStartPosePredict).count();
 #endif
 
@@ -1635,6 +1666,7 @@ void Tracking::Track()
             // Localization Mode: Local Mapping is deactivated (TODO Not available in inertial mode)
             if(mState==LOST)
             {
+                cout << "DEBUG -- test 18" << endl;
                 if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO)
                     Verbose::PrintMess("IMU. State LOST", Verbose::VERBOSITY_NORMAL);
                 bOK = Relocalization();
@@ -1643,6 +1675,7 @@ void Tracking::Track()
             {
                 if(!mbVO)
                 {
+                    cout << "DEBUG -- test 19" << endl;
                     // In last frame we tracked enough MapPoints in the map
                     if(!mVelocity.empty())
                     {
@@ -1655,6 +1688,7 @@ void Tracking::Track()
                 }
                 else
                 {
+                    cout << "DEBUG -- test 20" << endl;
                     // In last frame we tracked mainly "visual odometry" points.
 
                     // We compute two camera poses, one from motion model and one doing relocalization.
@@ -1701,7 +1735,7 @@ void Tracking::Track()
                 }
             }
         }
-
+        cout << "DEBUG -- test 21" << endl;
         if(!mCurrentFrame.mpReferenceKF)
             mCurrentFrame.mpReferenceKF = mpReferenceKF;
 
@@ -1727,6 +1761,7 @@ void Tracking::Track()
         }
         else
         {
+            cout << "DEBUG -- test 22" << endl;
             // mbVO true means that there are few matches to MapPoints in the map. We cannot retrieve
             // a local map and therefore we do not perform TrackLocalMap(). Once the system relocalizes
             // the camera we will use the local map again.
@@ -1855,6 +1890,7 @@ void Tracking::Track()
         // Reset if the camera get lost soon after initialization
         if(mState==LOST)
         {
+            cout << "DEBUG -- test 23" << endl;
             if(pCurrentMap->KeyFramesInMap()<=5)
             {
                 mpSystem->ResetActiveMap();
@@ -1876,15 +1912,12 @@ void Tracking::Track()
 
         mLastFrame = Frame(mCurrentFrame);
     }
-
-
-
-
     if(mState==OK || mState==RECENTLY_LOST)
     {
         // Store frame pose information to retrieve the complete camera trajectory afterwards.
         if(!mCurrentFrame.mTcw.empty())
         {
+            cout << "DEBUG -- test 24" << endl;
             cv::Mat Tcr = mCurrentFrame.mTcw*mCurrentFrame.mpReferenceKF->GetPoseInverse();
             mlRelativeFramePoses.push_back(Tcr);
             mlpReferences.push_back(mCurrentFrame.mpReferenceKF);
@@ -1893,6 +1926,7 @@ void Tracking::Track()
         }
         else
         {
+            cout << "DEBUG -- test 25" << endl;
             // This can happen if tracking is lost
             mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
             mlpReferences.push_back(mlpReferences.back());
@@ -1901,6 +1935,7 @@ void Tracking::Track()
         }
 
     }
+    cout << "INFO -- Tracking done! " << endl;
 }
 
 
@@ -3228,6 +3263,11 @@ bool Tracking::Relocalization()
                 MLPnPsolver* pSolver = new MLPnPsolver(mCurrentFrame,vvpMapPointMatches[i]);
                 pSolver->SetRansacParameters(0.99,10,300,6,0.5,5.991);  //This solver needs at least 6 points
                 vpMLPnPsolvers[i] = pSolver;
+
+                //! github 上面的issue
+                // modify by nlw  https://github.com/UZ-SLAMLab/ORB_SLAM3/issues/127
+                nCandidates++;
+                // modify by nlw
             }
         }
     }

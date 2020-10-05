@@ -89,3 +89,18 @@ Viewer.ViewpointX: 0
 Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -3.5 # -1.8
 Viewer.ViewpointF: 500
+
+#--------------------------------------------------------------------------------------------
+# Map Parameters
+#--------------------------------------------------------------------------------------------
+#Name of mapfile to be saved
+#No need to specify a path if the map is located in the folder devel/lib/orbs_slam2_ros
+#(same location as the executable Stereo/Mono/RGB file )
+Vocabulary.path: "/home/nlw/ORB_SLAM3/Vocabulary/ORBvoc.bin"
+
+# Map.mapfile: map_mono_imu_kdb.bin
+Map.mapfile: map_mono_imu_28_2.bin
+#Set to 1 if you want to save a map, 0 if not
+Map.save_map: 1
+#Set to 1 if you want to load a saved map, 0 if not
+Map.load_map: 0
